@@ -26,6 +26,7 @@ fn listener(
     conf: &ServerConf)
         -> io::Result<::std::net::TcpListener>
 {
+    println!("about to bind address {:?}", addr);
     let listener = match *addr {
         SocketAddr::V4(_) => net2::TcpBuilder::new_v4()?,
         SocketAddr::V6(_) => net2::TcpBuilder::new_v6()?,
@@ -34,6 +35,7 @@ fn listener(
     listener.reuse_address(true)?;
     listener.bind(addr)?;
     let backlog = conf.backlog.unwrap_or(1024);
+    println!("address bound");
     listener.listen(backlog)
 }
 
