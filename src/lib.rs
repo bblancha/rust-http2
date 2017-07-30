@@ -7,6 +7,7 @@ extern crate futures_cpupool;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_timer;
+extern crate tokio_uds;
 
 extern crate tls_api;
 extern crate tls_api_stub;
@@ -31,6 +32,9 @@ pub mod client;
 pub mod server_conf;
 pub mod server_conn;
 mod server_tls;
+pub mod socket;
+pub mod socket_tcp;
+pub mod socket_unix;
 pub mod server;
 
 mod ascii;
