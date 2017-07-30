@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::io;
 
 use tls_api;
 
@@ -30,8 +29,6 @@ use solicit_async::*;
 
 use futures_misc::*;
 
-use net2;
-
 use tls_api::TlsAcceptor;
 use tls_api_stub;
 
@@ -42,11 +39,13 @@ use service::Service;
 use service_paths::ServicePaths;
 
 use server_conf::*;
+use socket::ToSocketListener;
 
 pub use server_tls::ServerTlsOption;
 
 
-pub struct ServerBuilder<T, A : tls_api::TlsAcceptor = tls_api_stub::TlsAcceptor> {
+pub struct ServerBuilder<T : ToSocketListener = SocketAddr,
+                         A : tls_api::TlsAcceptor = tls_api_stub::TlsAcceptor> {
     pub conf: ServerConf,
     pub cpu_pool: CpuPoolOption,
     pub tls: ServerTlsOption<A>,
@@ -87,14 +86,14 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     }
 }
 
-impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
+impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
     /// New server builder with defaults.
     ///
     /// To call this function `ServerBuilder` must be parameterized with TLS acceptor.
     /// If TLS is not needed, `ServerBuilder::new_plain` function can be used.
     ///
     /// Port must be set, other properties are optional.
-    pub fn new() -> ServerBuilder<SocketAddr, A> {
+    pub fn new() -> ServerBuilder<T, A> {
         ServerBuilder {
             conf: ServerConf::new(),
             cpu_pool: CpuPoolOption::SingleThread,
@@ -119,10 +118,6 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     }
 
     pub fn build(self) -> Result<Server> {
-        let addr = self.addr.expect("listen addr is unset");
-
-        let listen_addr = addr.to_socket_addrs()?.next().unwrap();
-
         let (alive_tx, alive_rx) = mpsc::channel();
 
         let state: Arc<Mutex<ServerState>> = Default::default();
@@ -133,7 +128,7 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
 
         let (done_tx, done_rx) = oneshot::channel();
 
-        let listen = listener(&listen_addr, &self.conf)?;
+        let listen = self.addr.unwrap().to_listener(&self.conf);
 
         let local_addr = listen.local_addr().unwrap();
 
@@ -145,7 +140,7 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
             remote.spawn(move |handle| {
                 spawn_server_event_loop(
                     handle.clone(),
-                    listen_addr,
+                    local_addr,
                     state_copy,
                     tls,
                     listen,
@@ -169,7 +164,7 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
                     let mut lp = reactor::Core::new().expect("http2server");
                     let done_rx = spawn_server_event_loop(
                         lp.handle(),
-                        listen_addr,
+                        local_addr,
                         state_copy,
                         tls,
                         listen,
@@ -238,35 +233,35 @@ impl ServerStateSnapshot {
     }
 }
 
-#[cfg(unix)]
-fn configure_tcp(tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
-    use net2::unix::UnixTcpBuilderExt;
-    if let Some(reuse_port) = conf.reuse_port {
-        tcp.reuse_port(reuse_port)?;
-    }
-    Ok(())
-}
-
-#[cfg(windows)]
-fn configure_tcp(_tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
-    Ok(())
-}
-
-fn listener(
-    addr: &SocketAddr,
-    conf: &ServerConf)
-        -> io::Result<::std::net::TcpListener>
-{
-    let listener = match *addr {
-        SocketAddr::V4(_) => net2::TcpBuilder::new_v4()?,
-        SocketAddr::V6(_) => net2::TcpBuilder::new_v6()?,
-    };
-    configure_tcp(&listener, conf)?;
-    listener.reuse_address(true)?;
-    listener.bind(addr)?;
-    let backlog = conf.backlog.unwrap_or(1024);
-    listener.listen(backlog)
-}
+//#[cfg(unix)]
+//fn configure_tcp(tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
+//    use net2::unix::UnixTcpBuilderExt;
+//    if let Some(reuse_port) = conf.reuse_port {
+//        tcp.reuse_port(reuse_port)?;
+//    }
+//    Ok(())
+//}
+//
+//#[cfg(windows)]
+//fn configure_tcp(_tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
+//    Ok(())
+//}
+//
+//fn listener(
+//    addr: &SocketAddr,
+//    conf: &ServerConf)
+//        -> io::Result<::std::net::TcpListener>
+//{
+//    let listener = match *addr {
+//        SocketAddr::V4(_) => net2::TcpBuilder::new_v4()?,
+//        SocketAddr::V6(_) => net2::TcpBuilder::new_v6()?,
+//    };
+//    configure_tcp(&listener, conf)?;
+//    listener.reuse_address(true)?;
+//    listener.bind(addr)?;
+//    let backlog = conf.backlog.unwrap_or(1024);
+//    listener.listen(backlog)
+//}
 
 fn spawn_server_event_loop<S, A>(
     handle: reactor::Handle,

@@ -31,6 +31,7 @@ pub mod client;
 pub mod server_conf;
 pub mod server_conn;
 mod server_tls;
+pub mod socket;
 pub mod server;
 
 mod ascii;
