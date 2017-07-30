@@ -40,6 +40,7 @@ use service_paths::ServicePaths;
 
 use server_conf::*;
 use socket::ToSocketListener;
+use socket::ToTokioListener;
 
 pub use server_tls::ServerTlsOption;
 
@@ -117,7 +118,7 @@ impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
         self.tls = ServerTlsOption::Tls(Arc::new(acceptor));
     }
 
-    pub fn build(self) -> Result<Server> {
+    pub fn build(self) -> Result<Server<T>> {
         let (alive_tx, alive_rx) = mpsc::channel();
 
         let state: Arc<Mutex<ServerState>> = Default::default();
@@ -128,9 +129,9 @@ impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
 
         let (done_tx, done_rx) = oneshot::channel();
 
-        let listen = self.addr.unwrap().to_listener(&self.conf);
+        let local_addr = self.addr.unwrap();
 
-        let local_addr = listen.local_addr().unwrap();
+        let listen = local_addr.to_listener(&self.conf);
 
         let join = if let Some(remote) = self.event_loop {
             let tls = self.tls;
@@ -140,7 +141,6 @@ impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
             remote.spawn(move |handle| {
                 spawn_server_event_loop(
                     handle.clone(),
-                    local_addr,
                     state_copy,
                     tls,
                     listen,
@@ -164,7 +164,6 @@ impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
                     let mut lp = reactor::Core::new().expect("http2server");
                     let done_rx = spawn_server_event_loop(
                         lp.handle(),
-                        local_addr,
                         state_copy,
                         tls,
                         listen,
@@ -193,9 +192,9 @@ enum Completion {
     Rx(oneshot::Receiver<()>),
 }
 
-pub struct Server {
+pub struct Server<T : ToSocketListener = SocketAddr> {
     state: Arc<Mutex<ServerState>>,
-    local_addr: SocketAddr,
+    local_addr: T,
     shutdown: ShutdownSignal,
     alive_rx: mpsc::Receiver<()>,
     join: Option<Completion>,
@@ -233,42 +232,11 @@ impl ServerStateSnapshot {
     }
 }
 
-//#[cfg(unix)]
-//fn configure_tcp(tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
-//    use net2::unix::UnixTcpBuilderExt;
-//    if let Some(reuse_port) = conf.reuse_port {
-//        tcp.reuse_port(reuse_port)?;
-//    }
-//    Ok(())
-//}
-//
-//#[cfg(windows)]
-//fn configure_tcp(_tcp: &net2::TcpBuilder, conf: &ServerConf) -> io::Result<()> {
-//    Ok(())
-//}
-//
-//fn listener(
-//    addr: &SocketAddr,
-//    conf: &ServerConf)
-//        -> io::Result<::std::net::TcpListener>
-//{
-//    let listener = match *addr {
-//        SocketAddr::V4(_) => net2::TcpBuilder::new_v4()?,
-//        SocketAddr::V6(_) => net2::TcpBuilder::new_v6()?,
-//    };
-//    configure_tcp(&listener, conf)?;
-//    listener.reuse_address(true)?;
-//    listener.bind(addr)?;
-//    let backlog = conf.backlog.unwrap_or(1024);
-//    listener.listen(backlog)
-//}
-
 fn spawn_server_event_loop<S, A>(
     handle: reactor::Handle,
-    listen_addr: SocketAddr,
     state: Arc<Mutex<ServerState>>,
     tls: ServerTlsOption<A>,
-    listen: ::std::net::TcpListener,
+    listen: Box<ToTokioListener + Send>,
     exec: CpuPoolOption,
     shutdown_future: ShutdownFuture,
     conf: ServerConf,
@@ -279,7 +247,10 @@ fn spawn_server_event_loop<S, A>(
 {
     let service = Arc::new(service);
 
-    let listen = TcpListener::from_listener(listen, &listen_addr, &handle).unwrap();
+    let listen = listen.to_tokio_listener(&handle);
+    //let listen_addr = listen.local_addr().unwrap();
+
+    //let listen = TcpListener::from_listener(listen, &listen_addr, &handle).unwrap();
 
     let stuff = stream::repeat((handle.clone(), service, state, tls, conf));
 
@@ -336,7 +307,7 @@ fn spawn_server_event_loop<S, A>(
     done_rx
 }
 
-impl Server {
+impl Server<SocketAddr> {
     pub fn local_addr(&self) -> &SocketAddr {
         &self.local_addr
     }
@@ -353,7 +324,7 @@ impl Server {
 }
 
 // We shutdown the server in the destructor.
-impl Drop for Server {
+impl <T: ToSocketListener> Drop for Server<T> {
     fn drop(&mut self) {
         self.shutdown.shutdown();
 

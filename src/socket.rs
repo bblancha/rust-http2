@@ -2,18 +2,21 @@ use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::io;
 
+use tokio_core::reactor;
+use tokio_core::net::TcpListener;
+
 use server_conf::ServerConf;
 
 use net2;
 
 pub trait ToSocketListener {
-    fn to_listener(self, conf: &ServerConf) -> ::std::net::TcpListener;
+    fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send>;
 }
 
 impl ToSocketListener for SocketAddr {
-    fn to_listener(self, conf: &ServerConf) -> ::std::net::TcpListener {
+    fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send> {
         let listen_addr = self.to_socket_addrs().unwrap().next().unwrap();
-        listener(&listen_addr, conf).unwrap()
+        Box::new(listener(&listen_addr, conf).unwrap())
     }
 }
 
@@ -45,4 +48,15 @@ fn listener(
     listener.bind(addr)?;
     let backlog = conf.backlog.unwrap_or(1024);
     listener.listen(backlog)
+}
+
+pub trait ToTokioListener {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener;
+}
+
+impl ToTokioListener for ::std::net::TcpListener {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener {
+        let local_addr = self.local_addr().unwrap();
+        TcpListener::from_listener(*self, &local_addr, handle).unwrap()
+    }
 }
