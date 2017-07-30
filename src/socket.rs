@@ -60,8 +60,8 @@ pub trait ToTokioListener {
 impl ToTokioListener for ::std::net::TcpListener {
     fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream> {
         let local_addr = self.local_addr().unwrap();
-        let tokio_listener = TcpListener::from_listener(*self, &local_addr, handle);
-        Box::new(tokio_listener.expect("tokio_core::net::TcpListener"))
+        let tokio_listener = TcpListener::from_listener(*self, &local_addr, handle).unwrap();
+        Box::new(tokio_listener)
     }
 }
 
