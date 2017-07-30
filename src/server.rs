@@ -46,34 +46,55 @@ use server_conf::*;
 pub use server_tls::ServerTlsOption;
 
 
-pub struct ServerBuilder<A : tls_api::TlsAcceptor = tls_api_stub::TlsAcceptor> {
+pub struct ServerBuilder<T, A : tls_api::TlsAcceptor = tls_api_stub::TlsAcceptor> {
     pub conf: ServerConf,
     pub cpu_pool: CpuPoolOption,
     pub tls: ServerTlsOption<A>,
-    pub addr: Option<SocketAddr>,
+    pub addr: Option<T>,
     /// Event loop to spawn server.
     /// If not specified, builder will create new event loop in a new thread.
     pub event_loop: Option<reactor::Remote>,
     pub service: ServicePaths,
 }
 
-impl ServerBuilder<tls_api_stub::TlsAcceptor> {
+impl ServerBuilder<SocketAddr, tls_api_stub::TlsAcceptor> {
     /// New server builder with defaults.
     ///
     /// Port must be set, other properties are optional.
-    pub fn new_plain() -> ServerBuilder<tls_api_stub::TlsAcceptor> {
+    pub fn new_plain() -> ServerBuilder<SocketAddr, tls_api_stub::TlsAcceptor> {
         ServerBuilder::new()
     }
 }
 
-impl<A : tls_api::TlsAcceptor> ServerBuilder<A> {
+impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
+    /// Set port server listens on.
+    /// Can be zero to bind on any available port,
+    /// which can be later obtained by `Server::local_addr`.
+    pub fn set_port(&mut self, port: u16) {
+        self.set_addr(("::", port)).expect("set_addr");
+    }
+
+    /// Set port server listens on.
+    pub fn set_addr<S : ToSocketAddrs>(&mut self, addr: S) -> Result<()> {
+        let addrs: Vec<_> = addr.to_socket_addrs()?.collect();
+        if addrs.is_empty() {
+            return Err(Error::Other("addr is resolved to empty list"));
+        } else if addrs.len() > 1 {
+            return Err(Error::Other("addr is resolved to more than one addr"));
+        }
+        self.addr = Some(addrs.into_iter().next().unwrap());
+        Ok(())
+    }
+}
+
+impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     /// New server builder with defaults.
     ///
     /// To call this function `ServerBuilder` must be parameterized with TLS acceptor.
     /// If TLS is not needed, `ServerBuilder::new_plain` function can be used.
     ///
     /// Port must be set, other properties are optional.
-    pub fn new() -> ServerBuilder<A> {
+    pub fn new() -> ServerBuilder<SocketAddr, A> {
         ServerBuilder {
             conf: ServerConf::new(),
             cpu_pool: CpuPoolOption::SingleThread,
@@ -95,25 +116,6 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<A> {
 
     pub fn set_tls(&mut self, acceptor: A) {
         self.tls = ServerTlsOption::Tls(Arc::new(acceptor));
-    }
-
-    /// Set port server listens on.
-    /// Can be zero to bind on any available port,
-    /// which can be later obtained by `Server::local_addr`.
-    pub fn set_port(&mut self, port: u16) {
-        self.set_addr(("::", port)).expect("set_addr");
-    }
-
-    /// Set port server listens on.
-    pub fn set_addr<S : ToSocketAddrs>(&mut self, addr: S) -> Result<()> {
-        let addrs: Vec<_> = addr.to_socket_addrs()?.collect();
-        if addrs.is_empty() {
-            return Err(Error::Other("addr is resolved to empty list"));
-        } else if addrs.len() > 1 {
-            return Err(Error::Other("addr is resolved to more than one addr"));
-        }
-        self.addr = Some(addrs.into_iter().next().unwrap());
-        Ok(())
     }
 
     pub fn build(self) -> Result<Server> {
