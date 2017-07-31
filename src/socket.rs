@@ -53,18 +53,30 @@ fn listener(
 }
 
 pub trait ToTokioListener {
-    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener;
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream>;
 
     fn local_addr(&self) -> io::Result<Box<Any>>;
 }
 
 impl ToTokioListener for ::std::net::TcpListener {
-    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream> {
         let local_addr = self.local_addr().unwrap();
-        TcpListener::from_listener(*self, &local_addr, handle).unwrap()
+        Box::new(TcpListener::from_listener(*self, &local_addr, handle).unwrap())
     }
 
     fn local_addr(&self) -> io::Result<Box<Any>> {
         Ok(Box::new(self.local_addr().unwrap()))
+    }
+}
+
+use tokio_core::net::TcpStream;
+use futures::stream::Stream;
+pub trait ToStream {
+    fn incoming(self: Box<Self>) -> Box<Stream<Item=(TcpStream, SocketAddr), Error=io::Error>>;
+}
+
+impl ToStream for TcpListener {
+    fn incoming(self: Box<Self>) -> Box<Stream<Item=(TcpStream, SocketAddr), Error=io::Error>> {
+        Box::new((*self).incoming())
     }
 }
