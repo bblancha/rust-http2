@@ -1,11 +1,17 @@
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::io;
-
 use std::any::Any;
+use std::fmt::Debug;
 
 use tokio_core::reactor;
 use tokio_core::net::TcpListener;
+use tokio_core::net::TcpStream;
+
+use tokio_io::AsyncRead;
+use tokio_io::AsyncWrite;
+
+use futures::stream::Stream;
 
 use server_conf::ServerConf;
 
@@ -69,14 +75,40 @@ impl ToTokioListener for ::std::net::TcpListener {
     }
 }
 
-use tokio_core::net::TcpStream;
-use futures::stream::Stream;
 pub trait ToStream {
-    fn incoming(self: Box<Self>) -> Box<Stream<Item=(TcpStream, SocketAddr), Error=io::Error>>;
+    fn incoming(self: Box<Self>)
+        -> Box<Stream<Item=(Box<StreamItem>, SocketAddr), Error=io::Error>>;
 }
 
 impl ToStream for TcpListener {
-    fn incoming(self: Box<Self>) -> Box<Stream<Item=(TcpStream, SocketAddr), Error=io::Error>> {
-        Box::new((*self).incoming())
+    fn incoming(self: Box<Self>)
+        -> Box<Stream<Item=(Box<StreamItem>, SocketAddr), Error=io::Error>> {
+        let stream = (*self).incoming().map(|(stream, addr)|
+            (Box::new(stream) as Box<StreamItem>, addr)
+        );
+        Box::new(stream)
+    }
+}
+
+pub trait StreamItem:
+        AsyncRead +
+        AsyncWrite +
+        io::Read +
+        io::Write +
+        Debug +
+        Send + Sync
+{
+    fn is_tcp(&self) -> bool;
+
+    fn set_nodelay(&self, no_delay: bool) -> io::Result<()>;
+}
+
+impl StreamItem for TcpStream {
+    fn is_tcp(&self) -> bool {
+        true
+    }
+
+    fn set_nodelay(&self, no_delay: bool) -> io::Result<()> {
+        self.set_nodelay(no_delay)
     }
 }

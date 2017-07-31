@@ -248,9 +248,6 @@ fn spawn_server_event_loop<S, A>(
     let service = Arc::new(service);
 
     let tokio_listener = listen.to_tokio_listener(&handle);
-    //let listen_addr = listen.local_addr().unwrap();
-
-    //let listen = TcpListener::from_listener(listen, &listen_addr, &handle).unwrap();
 
     let stuff = stream::repeat((handle.clone(), service, state, tls, conf));
 
@@ -258,8 +255,10 @@ fn spawn_server_event_loop<S, A>(
         .for_each(move |((socket, peer_addr), (loop_handle, service, state, tls, conf))| {
             info!("accepted connection from {}", peer_addr);
 
-            let no_delay = conf.no_delay.unwrap_or(true);
-            socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");
+            if socket.is_tcp() {
+                let no_delay = conf.no_delay.unwrap_or(true);
+                socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");
+            }
 
             let (conn, future) = ServerConnection::new(
                 &loop_handle, socket, tls, exec.clone(), conf, service);
