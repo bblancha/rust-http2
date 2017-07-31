@@ -69,7 +69,8 @@ impl ToTokioListener for ::std::net::TcpListener {
 
 impl ToStream for TcpListener {
     fn incoming(self: Box<Self>)
-        -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>> {
+        -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>
+    {
         let stream = (*self).incoming().map(|(stream, addr)|
             (Box::new(stream) as Box<StreamItem>, Box::new(addr) as Box<Any>)
         );

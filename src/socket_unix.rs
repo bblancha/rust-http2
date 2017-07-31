@@ -1,0 +1,53 @@
+use std::io;
+use std::any::Any;
+
+use tokio_core::reactor;
+use tokio_uds::UnixListener;
+use tokio_uds::UnixStream;
+
+use futures::stream::Stream;
+
+use socket::ToSocketListener;
+use socket::ToTokioListener;
+use socket::ToStream;
+use socket::StreamItem;
+
+use server_conf::ServerConf;
+
+
+impl <'a>ToSocketListener for &'a str {
+    fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send> {
+        Box::new(::std::os::unix::net::UnixListener::bind(self).unwrap())
+    }
+}
+
+impl ToTokioListener for ::std::os::unix::net::UnixListener {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream> {
+        Box::new(UnixListener::from_listener(*self, handle).unwrap())
+    }
+
+    fn local_addr(&self) -> io::Result<Box<Any>> {
+        Ok(Box::new(self.local_addr().unwrap()))
+    }
+}
+
+impl ToStream for UnixListener {
+    fn incoming(self: Box<Self>)
+        -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>
+    {
+        let stream = (*self).incoming().map(|(stream, addr)|
+            (Box::new(stream) as Box<StreamItem>, Box::new(addr) as Box<Any>)
+        );
+        Box::new(stream)
+    }
+}
+
+impl StreamItem for UnixStream {
+    fn is_tcp(&self) -> bool {
+        false
+    }
+
+    fn set_nodelay(&self, no_delay: bool) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Other, "Cannot set nodelay on unix domain socket"))
+    }
+}

@@ -56,11 +56,11 @@ pub struct ServerBuilder<T : ToSocketListener = SocketAddr,
     pub service: ServicePaths,
 }
 
-impl ServerBuilder<SocketAddr, tls_api_stub::TlsAcceptor> {
+impl<T: ToSocketListener + Clone + 'static> ServerBuilder<T, tls_api_stub::TlsAcceptor> {
     /// New server builder with defaults.
     ///
     /// Port must be set, other properties are optional.
-    pub fn new_plain() -> ServerBuilder<SocketAddr, tls_api_stub::TlsAcceptor> {
+    pub fn new_plain() -> ServerBuilder<T, tls_api_stub::TlsAcceptor> {
         ServerBuilder::new()
     }
 }
@@ -308,8 +308,8 @@ fn spawn_server_event_loop<S, A>(
     done_rx
 }
 
-impl Server<SocketAddr> {
-    pub fn local_addr(&self) -> &SocketAddr {
+impl<T: ToSocketListener> Server<T> {
+    pub fn local_addr(&self) -> &T {
         &self.local_addr
     }
 
