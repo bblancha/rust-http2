@@ -1,5 +1,3 @@
-use std::net::SocketAddr;
-
 use std::io;
 use std::any::Any;
 use std::fmt::Debug;
@@ -25,7 +23,7 @@ pub trait ToTokioListener {
 
 pub trait ToStream {
     fn incoming(self: Box<Self>)
-        -> Box<Stream<Item=(Box<StreamItem>, SocketAddr), Error=io::Error>>;
+        -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>;
 }
 
 pub trait StreamItem:

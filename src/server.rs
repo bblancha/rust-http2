@@ -253,9 +253,11 @@ fn spawn_server_event_loop<S, A>(
 
     let loop_run = tokio_listener.incoming().map_err(Error::from).zip(stuff)
         .for_each(move |((socket, peer_addr), (loop_handle, service, state, tls, conf))| {
-            info!("accepted connection from {}", peer_addr);
 
             if socket.is_tcp() {
+                info!("accepted connection from {}",
+                    peer_addr.downcast_ref::<SocketAddr>().unwrap());
+
                 let no_delay = conf.no_delay.unwrap_or(true);
                 socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");
             }
