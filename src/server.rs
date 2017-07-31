@@ -9,7 +9,6 @@ use std::sync::Mutex;
 use tls_api;
 
 use tokio_core::reactor;
-use tokio_core::net::TcpListener;
 
 use futures::future;
 use futures::future::Future;
@@ -87,7 +86,7 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     }
 }
 
-impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
+impl<T : ToSocketListener + Clone + 'static, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
     /// New server builder with defaults.
     ///
     /// To call this function `ServerBuilder` must be parameterized with TLS acceptor.
@@ -129,9 +128,10 @@ impl<T : ToSocketListener, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
 
         let (done_tx, done_rx) = oneshot::channel();
 
-        let local_addr = self.addr.unwrap();
+        let listen = self.addr.unwrap().to_listener(&self.conf);
 
-        let listen = local_addr.to_listener(&self.conf);
+        let local_addr = listen.local_addr().unwrap();
+        let local_addr = local_addr.downcast_ref::<T>().unwrap().clone();
 
         let join = if let Some(remote) = self.event_loop {
             let tls = self.tls;
@@ -247,14 +247,14 @@ fn spawn_server_event_loop<S, A>(
 {
     let service = Arc::new(service);
 
-    let listen = listen.to_tokio_listener(&handle);
+    let tokio_listener = listen.to_tokio_listener(&handle);
     //let listen_addr = listen.local_addr().unwrap();
 
     //let listen = TcpListener::from_listener(listen, &listen_addr, &handle).unwrap();
 
     let stuff = stream::repeat((handle.clone(), service, state, tls, conf));
 
-    let loop_run = listen.incoming().map_err(Error::from).zip(stuff)
+    let loop_run = tokio_listener.incoming().map_err(Error::from).zip(stuff)
         .for_each(move |((socket, peer_addr), (loop_handle, service, state, tls, conf))| {
             info!("accepted connection from {}", peer_addr);
 

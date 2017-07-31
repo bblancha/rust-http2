@@ -2,6 +2,8 @@ use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::io;
 
+use std::any::Any;
+
 use tokio_core::reactor;
 use tokio_core::net::TcpListener;
 
@@ -52,11 +54,17 @@ fn listener(
 
 pub trait ToTokioListener {
     fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener;
+
+    fn local_addr(&self) -> io::Result<Box<Any>>;
 }
 
 impl ToTokioListener for ::std::net::TcpListener {
     fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> TcpListener {
         let local_addr = self.local_addr().unwrap();
         TcpListener::from_listener(*self, &local_addr, handle).unwrap()
+    }
+
+    fn local_addr(&self) -> io::Result<Box<Any>> {
+        Ok(Box::new(self.local_addr().unwrap()))
     }
 }
