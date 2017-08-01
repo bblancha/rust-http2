@@ -1,5 +1,7 @@
 use std::io;
 use std::any::Any;
+use std::fs;
+use std::path::Path;
 
 use tokio_core::reactor;
 use tokio_uds::UnixListener;
@@ -17,6 +19,9 @@ use server_conf::ServerConf;
 
 impl ToSocketListener for String {
     fn to_listener(&self, _conf: &ServerConf) -> Box<ToTokioListener + Send> {
+        if Path::new(self.as_str()).exists() {
+            fs::remove_file(self.as_str()).expect("remove socket before binding");
+        }
         Box::new(::std::os::unix::net::UnixListener::bind(self).unwrap())
     }
 }

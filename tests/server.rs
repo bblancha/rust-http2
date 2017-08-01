@@ -397,7 +397,7 @@ use unix_socket::UnixStream;
 pub fn http_1_1_unix() {
     env_logger::init().ok();
 
-    let server = ServerTestUnixSocket::new("/tmp/rust_http2_test".to_owned());
+    let _server = ServerTestUnixSocket::new("/tmp/rust_http2_test".to_owned());
 
     let mut unix_stream = UnixStream::connect("/tmp/rust_http2_test").expect("connect");
 
