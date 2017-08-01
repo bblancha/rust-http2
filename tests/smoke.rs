@@ -48,6 +48,26 @@ fn smoke() {
 }
 
 #[test]
+fn smoke_unix_domain_sockets() {
+    env_logger::init().ok();
+
+    let server = ServerTestUnixSocket::new("/tmp/smoke_test".to_owned());
+
+    let client: Client =
+        Client::new_plain_unix("/tmp/smoke_test", Default::default()).expect("client");
+
+    let mut futures = Vec::new();
+    for _ in 0..10 {
+        futures.push(client.start_get("/blocks/200000/5", "localhost").collect());
+    }
+
+    let r = future::join_all(futures).wait().expect("wait");
+    for rr in r {
+        assert_eq!(200000 * 5, rr.body.len());
+    }
+}
+
+#[test]
 fn parallel_large() {
     env_logger::init().ok();
 
