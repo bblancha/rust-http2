@@ -15,8 +15,8 @@ use socket::StreamItem;
 use server_conf::ServerConf;
 
 
-impl <'a>ToSocketListener for &'a str {
-    fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send> {
+impl ToSocketListener for String {
+    fn to_listener(&self, _conf: &ServerConf) -> Box<ToTokioListener + Send> {
         Box::new(::std::os::unix::net::UnixListener::bind(self).unwrap())
     }
 }
@@ -27,7 +27,11 @@ impl ToTokioListener for ::std::os::unix::net::UnixListener {
     }
 
     fn local_addr(&self) -> io::Result<Box<Any>> {
-        Ok(Box::new(self.local_addr().unwrap()))
+        let addr = self.local_addr().unwrap();
+        let path = addr.as_pathname().unwrap();
+        let string = path.to_str().unwrap().to_owned();
+
+        Ok(Box::new(string))
     }
 }
 
@@ -47,7 +51,7 @@ impl StreamItem for UnixStream {
         false
     }
 
-    fn set_nodelay(&self, no_delay: bool) -> io::Result<()> {
+    fn set_nodelay(&self, _no_delay: bool) -> io::Result<()> {
         Err(io::Error::new(io::ErrorKind::Other, "Cannot set nodelay on unix domain socket"))
     }
 }

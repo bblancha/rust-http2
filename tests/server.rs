@@ -6,6 +6,7 @@ extern crate futures;
 extern crate tokio_core;
 extern crate tokio_tls_api;
 extern crate httpbis;
+extern crate unix_socket;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -388,6 +389,22 @@ pub fn http_1_1() {
 
     let mut read = Vec::new();
     tcp_stream.read_to_end(&mut read).expect("read");
+    assert!(&read.starts_with(b"HTTP/1.1 500 Internal Server Error\r\n"), "{:?}", httpbis::misc::BsDebug(&read));
+}
+
+use unix_socket::UnixStream;
+#[test]
+pub fn http_1_1_unix() {
+    env_logger::init().ok();
+
+    let server = ServerTestUnixSocket::new("/tmp/rust_http2_test".to_owned());
+
+    let mut unix_stream = UnixStream::connect("/tmp/rust_http2_test").expect("connect");
+
+    unix_stream.write_all(b"GET / HTTP/1.1\n").expect("write");
+
+    let mut read = Vec::new();
+    unix_stream.read_to_end(&mut read).expect("read");
     assert!(&read.starts_with(b"HTTP/1.1 500 Internal Server Error\r\n"), "{:?}", httpbis::misc::BsDebug(&read));
 }
 

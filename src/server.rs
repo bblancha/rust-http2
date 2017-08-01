@@ -86,6 +86,14 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     }
 }
 
+impl<A: tls_api::TlsAcceptor> ServerBuilder<String, A> {
+    // Set name of unix domain socket
+    pub fn set_addr(&mut self, addr: String) -> Result<()> {
+        self.addr = Some(addr);
+        Ok(())
+    }
+}
+
 impl<T : ToSocketListener + Clone + 'static, A : tls_api::TlsAcceptor> ServerBuilder<T, A> {
     /// New server builder with defaults.
     ///
@@ -131,7 +139,7 @@ impl<T : ToSocketListener + Clone + 'static, A : tls_api::TlsAcceptor> ServerBui
         let listen = self.addr.unwrap().to_listener(&self.conf);
 
         let local_addr = listen.local_addr().unwrap();
-        let local_addr = local_addr.downcast_ref::<T>().unwrap().clone();
+        let local_addr = local_addr.downcast_ref::<T>().expect("downcast socket_addr").clone();
 
         let join = if let Some(remote) = self.event_loop {
             let tls = self.tls;

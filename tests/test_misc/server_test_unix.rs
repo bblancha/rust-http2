@@ -16,8 +16,8 @@ use httpbis::Service;
 use regex::Regex;
 
 /// HTTP/2 server used by tests
-pub struct ServerTestUnixSocket<'a> {
-    pub server: Server<&'a str>,
+pub struct ServerTestUnixSocket {
+    pub server: Server<String>,
 }
 
 
@@ -51,9 +51,10 @@ impl Service for Echo {
 }
 
 
-impl <'a>ServerTestUnixSocket<'a> {
-    pub fn new() -> ServerTestUnixSocket<'a> {
-        let mut server = ServerBuilder::<&str>::new_plain();
+impl ServerTestUnixSocket {
+    pub fn new(addr: String) -> ServerTestUnixSocket {
+        let mut server = ServerBuilder::<String>::new_plain();
+        server.set_addr(addr);
 
         server.service.set_service("/blocks", Arc::new(Blocks {}));
         server.service.set_service("/echo", Arc::new(Echo {}));
