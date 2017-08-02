@@ -354,6 +354,8 @@ impl <T: ToSocketListener> Drop for Server<T> {
                 // cannot wait on _rx, because Core might not be running
             },
         };
+
+        self.local_addr.cleanup();
     }
 }
 

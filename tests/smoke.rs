@@ -50,12 +50,13 @@ fn smoke() {
 #[test]
 fn smoke_unix_domain_sockets() {
     env_logger::init().ok();
+    let test_addr = "/tmp/rust_http2_smoke_test";
 
-    let _server = ServerTestUnixSocket::new("/tmp/smoke_test".to_owned());
+    let _server = ServerTestUnixSocket::new(test_addr.to_owned());
 
     let client: Client =
         Client::new_plain_unix(
-            "/tmp/smoke_test",
+            test_addr,
             Default::default()
         ).expect("client");
 

@@ -26,6 +26,8 @@ impl ToSocketListener for SocketAddr {
         let listen_addr = self.to_socket_addrs().unwrap().next().unwrap();
         Box::new(listener(&listen_addr, conf).unwrap())
     }
+
+    fn cleanup(&self) {}
 }
 
 #[cfg(unix)]

@@ -15,6 +15,8 @@ use server_conf::ServerConf;
 
 pub trait ToSocketListener {
     fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send>;
+
+    fn cleanup(&self);
 }
 
 pub trait ToTokioListener {
