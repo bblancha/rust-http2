@@ -1,6 +1,7 @@
 use std::io;
 use std::any::Any;
 use std::fmt::Debug;
+use std::fmt::Display;
 
 use tokio_core::reactor;
 use tokio_io::AsyncRead;
@@ -24,6 +25,14 @@ pub trait ToTokioListener {
 pub trait ToStream {
     fn incoming(self: Box<Self>)
         -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>;
+}
+
+pub trait ToClientStream:
+        Display +
+        Send + Sync
+{
+    fn connect(&self, handle: &reactor::Handle)
+        -> Box<::tokio_core::net::TcpStreamNew>;
 }
 
 pub trait StreamItem:

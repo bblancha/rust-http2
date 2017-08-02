@@ -1,7 +1,6 @@
 //! Single client connection
 
 use std::result::Result as std_Result;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::io;
 
@@ -43,6 +42,7 @@ use common::*;
 use stream_part::*;
 use client_conf::*;
 use client_tls::*;
+use socket::*;
 
 use rc_mut::*;
 
@@ -253,7 +253,7 @@ impl ClientConnection {
 
     pub fn new<H, C>(
         lh: reactor::Handle,
-        addr: &SocketAddr,
+        addr: Box<ToClientStream>,
         tls: ClientTlsOption<C>,
         conf: ClientConf,
         callbacks: H)
@@ -270,16 +270,14 @@ impl ClientConnection {
 
     pub fn new_plain<C>(
         lh: reactor::Handle,
-        addr: &SocketAddr,
+        addr: Box<ToClientStream>,
         conf: ClientConf,
         callbacks: C)
             -> (Self, HttpFuture<()>)
         where C : ClientConnectionCallbacks
     {
-        let addr = addr.clone();
-
         let no_delay = conf.no_delay.unwrap_or(true);
-        let connect = TcpStream::connect(&addr, &lh).map_err(Into::into);
+        let connect = addr.connect(&lh).map_err(Into::into);
         let map_callback = move |socket: TcpStream| {
             info!("connected to {}", addr);
 
@@ -302,16 +300,15 @@ impl ClientConnection {
         lh: reactor::Handle,
         domain: &str,
         connector: Arc<C>,
-        addr: &SocketAddr,
+        addr: Box<ToClientStream>,
         conf: ClientConf,
         callbacks: H)
             -> (Self, HttpFuture<()>)
         where H : ClientConnectionCallbacks, C : TlsConnector + Sync
     {
         let domain = domain.to_owned();
-        let addr = addr.clone();
 
-        let connect = TcpStream::connect(&addr, &lh)
+        let connect = addr.connect(&lh)
             .map(move |c| { info!("connected to {}", addr); c })
             .map_err(|e| e.into());
 

@@ -16,6 +16,7 @@ use net2;
 use socket::ToSocketListener;
 use socket::ToTokioListener;
 use socket::ToStream;
+use socket::ToClientStream;
 use socket::StreamItem;
 
 
@@ -77,6 +78,15 @@ impl ToStream for TcpListener {
         Box::new(stream)
     }
 }
+
+impl ToClientStream for SocketAddr {
+    fn connect(&self, handle: &reactor::Handle)
+        -> Box<::tokio_core::net::TcpStreamNew>
+    {
+        Box::new(TcpStream::connect(self, &handle))
+    }
+}
+
 
 impl StreamItem for TcpStream {
     fn is_tcp(&self) -> bool {
