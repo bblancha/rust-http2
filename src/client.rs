@@ -56,6 +56,7 @@ impl<T: ToClientStream + Send + Clone + 'static> ClientBuilder<T, tls_api_stub::
     }
 }
 
+#[cfg(unix)]
 impl ClientBuilder<String, tls_api_stub::TlsConnector> {
     pub fn new_plain_unix() -> ClientBuilder<String, tls_api_stub::TlsConnector> {
         ClientBuilder::<String, tls_api_stub::TlsConnector>::new()
@@ -78,6 +79,7 @@ impl<C : TlsConnector> ClientBuilder<SocketAddr, C> {
     }
 }
 
+#[cfg(unix)]
 impl<C : TlsConnector> ClientBuilder<String, C> {
     /// Set the addr client connects to.
     pub fn set_unix_addr(&mut self, addr: &str) -> Result<()> {

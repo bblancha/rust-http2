@@ -42,6 +42,9 @@ use std::iter::FromIterator;
 use std::net::TcpStream;
 use std::sync::mpsc;
 
+#[cfg(unix)]
+use unix_socket::UnixStream;
+
 use test_misc::*;
 
 
@@ -392,7 +395,7 @@ pub fn http_1_1() {
     assert!(&read.starts_with(b"HTTP/1.1 500 Internal Server Error\r\n"), "{:?}", httpbis::misc::BsDebug(&read));
 }
 
-use unix_socket::UnixStream;
+#[cfg(unix)]
 #[test]
 pub fn http_1_1_unix() {
     env_logger::init().ok();

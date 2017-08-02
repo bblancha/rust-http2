@@ -65,6 +65,7 @@ impl<T: ToSocketListener + Clone + 'static> ServerBuilder<T, tls_api_stub::TlsAc
     }
 }
 
+#[cfg(unix)]
 impl ServerBuilder<String, tls_api_stub::TlsAcceptor> {
     /// New unix domain socket server with defaults
     ///
@@ -95,6 +96,7 @@ impl<A : tls_api::TlsAcceptor> ServerBuilder<SocketAddr, A> {
     }
 }
 
+#[cfg(unix)]
 impl<A: tls_api::TlsAcceptor> ServerBuilder<String, A> {
     // Set name of unix domain socket
     pub fn set_unix_addr(&mut self, addr: String) -> Result<()> {

@@ -47,6 +47,7 @@ fn smoke() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn smoke_unix_domain_sockets() {
     env_logger::init().ok();

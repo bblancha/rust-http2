@@ -34,8 +34,10 @@ pub mod server_conn;
 mod server_tls;
 pub mod socket;
 pub mod socket_tcp;
-pub mod socket_unix;
 pub mod server;
+
+#[cfg(unix)]
+pub mod socket_unix;
 
 mod ascii;
 
