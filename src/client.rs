@@ -203,8 +203,8 @@ impl Client {
 
     pub fn new_plain_unix(addr: &str, conf: ClientConf) -> Result<Client> {
         let mut client = ClientBuilder::new_plain_unix();
-        client.set_unix_addr(addr).unwrap();
         client.conf = conf;
+        client.set_unix_addr(addr)?;
         client.build()
     }
 

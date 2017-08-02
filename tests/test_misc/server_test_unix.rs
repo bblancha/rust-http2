@@ -53,8 +53,8 @@ impl Service for Echo {
 
 impl ServerTestUnixSocket {
     pub fn new(addr: String) -> ServerTestUnixSocket {
-        let mut server = ServerBuilder::<String>::new_plain();
-        server.set_addr(addr).unwrap();
+        let mut server = ServerBuilder::new_plain_unix();
+        server.set_unix_addr(addr).unwrap();
 
         server.service.set_service("/blocks", Arc::new(Blocks {}));
         server.service.set_service("/echo", Arc::new(Echo {}));
