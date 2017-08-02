@@ -280,7 +280,9 @@ impl ClientConnection {
         let map_callback = move |socket: Box<StreamItem>| {
             info!("connected to {}", addr);
 
-            socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");
+            if socket.is_tcp() {
+                socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");
+            }
 
             socket
         };

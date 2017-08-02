@@ -51,10 +51,13 @@ fn smoke() {
 fn smoke_unix_domain_sockets() {
     env_logger::init().ok();
 
-    let server = ServerTestUnixSocket::new("/tmp/smoke_test".to_owned());
+    let _server = ServerTestUnixSocket::new("/tmp/smoke_test".to_owned());
 
     let client: Client =
-        Client::new_plain_unix("/tmp/smoke_test", Default::default()).expect("client");
+        Client::new_plain_unix(
+            "/tmp/smoke_test",
+            Default::default()
+        ).expect("client");
 
     let mut futures = Vec::new();
     for _ in 0..10 {

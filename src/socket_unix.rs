@@ -8,10 +8,14 @@ use tokio_uds::UnixListener;
 use tokio_uds::UnixStream;
 
 use futures::stream::Stream;
+use futures::Future;
+use futures::future::ok;
+use futures::future::err;
 
 use socket::ToSocketListener;
 use socket::ToTokioListener;
 use socket::ToStream;
+use socket::ToClientStream;
 use socket::StreamItem;
 
 use server_conf::ServerConf;
@@ -48,6 +52,19 @@ impl ToStream for UnixListener {
             (Box::new(stream) as Box<StreamItem>, Box::new(addr) as Box<Any>)
         );
         Box::new(stream)
+    }
+}
+
+impl ToClientStream for String {
+    fn connect(&self, handle: &reactor::Handle)
+        -> Box<Future<Item=Box<StreamItem>, Error=io::Error> + Send>
+    {
+        let stream = UnixStream::connect(Path::new(self), &handle);
+        if stream.is_ok() {
+            Box::new(ok(Box::new(stream.unwrap()) as Box<StreamItem>))
+        } else {
+            Box::new(err(stream.unwrap_err()))
+        }
     }
 }
 
