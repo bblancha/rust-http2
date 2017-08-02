@@ -278,7 +278,7 @@ impl ClientConnection {
     {
         let no_delay = conf.no_delay.unwrap_or(true);
         let connect = addr.connect(&lh).map_err(Into::into);
-        let map_callback = move |socket: TcpStream| {
+        let map_callback = move |socket: Box<StreamItem>| {
             info!("connected to {}", addr);
 
             socket.set_nodelay(no_delay).expect("failed to set TCP_NODELAY");

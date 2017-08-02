@@ -8,6 +8,7 @@ use tokio_core::net::TcpListener;
 use tokio_core::net::TcpStream;
 
 use futures::stream::Stream;
+use futures::Future;
 
 use server_conf::ServerConf;
 
@@ -81,12 +82,14 @@ impl ToStream for TcpListener {
 
 impl ToClientStream for SocketAddr {
     fn connect(&self, handle: &reactor::Handle)
-        -> Box<::tokio_core::net::TcpStreamNew>
+        -> Box<Future<Item=Box<StreamItem>, Error=io::Error> + Send>
     {
-        Box::new(TcpStream::connect(self, &handle))
+        let stream = TcpStream::connect(self, &handle).map(|stream|
+            Box::new(stream) as Box<StreamItem>
+        );
+        Box::new(stream)
     }
 }
-
 
 impl StreamItem for TcpStream {
     fn is_tcp(&self) -> bool {

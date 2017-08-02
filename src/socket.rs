@@ -8,6 +8,7 @@ use tokio_io::AsyncRead;
 use tokio_io::AsyncWrite;
 
 use futures::stream::Stream;
+use futures::Future;
 
 use server_conf::ServerConf;
 
@@ -32,7 +33,7 @@ pub trait ToClientStream:
         Send + Sync
 {
     fn connect(&self, handle: &reactor::Handle)
-        -> Box<::tokio_core::net::TcpStreamNew>;
+        -> Box<Future<Item=Box<StreamItem>, Error=io::Error> + Send>;
 }
 
 pub trait StreamItem:
