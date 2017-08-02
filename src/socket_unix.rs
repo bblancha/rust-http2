@@ -14,7 +14,7 @@ use futures::future::err;
 
 use socket::ToSocketListener;
 use socket::ToTokioListener;
-use socket::ToStream;
+use socket::ToServerStream;
 use socket::ToClientStream;
 use socket::StreamItem;
 
@@ -31,7 +31,7 @@ impl ToSocketListener for String {
 }
 
 impl ToTokioListener for ::std::os::unix::net::UnixListener {
-    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream> {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToServerStream> {
         Box::new(UnixListener::from_listener(*self, handle).unwrap())
     }
 
@@ -44,7 +44,7 @@ impl ToTokioListener for ::std::os::unix::net::UnixListener {
     }
 }
 
-impl ToStream for UnixListener {
+impl ToServerStream for UnixListener {
     fn incoming(self: Box<Self>)
         -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>
     {

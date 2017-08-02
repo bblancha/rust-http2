@@ -18,12 +18,12 @@ pub trait ToSocketListener {
 }
 
 pub trait ToTokioListener {
-    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream>;
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToServerStream>;
 
     fn local_addr(&self) -> io::Result<Box<Any>>;
 }
 
-pub trait ToStream {
+pub trait ToServerStream {
     fn incoming(self: Box<Self>)
         -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>;
 }

@@ -16,7 +16,7 @@ use net2;
 
 use socket::ToSocketListener;
 use socket::ToTokioListener;
-use socket::ToStream;
+use socket::ToServerStream;
 use socket::ToClientStream;
 use socket::StreamItem;
 
@@ -59,7 +59,7 @@ fn listener(
 }
 
 impl ToTokioListener for ::std::net::TcpListener {
-    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToStream> {
+    fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToServerStream> {
         let local_addr = self.local_addr().unwrap();
         Box::new(TcpListener::from_listener(*self, &local_addr, handle).unwrap())
     }
@@ -69,7 +69,7 @@ impl ToTokioListener for ::std::net::TcpListener {
     }
 }
 
-impl ToStream for TcpListener {
+impl ToServerStream for TcpListener {
     fn incoming(self: Box<Self>)
         -> Box<Stream<Item=(Box<StreamItem>, Box<Any>), Error=io::Error>>
     {
