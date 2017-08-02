@@ -27,7 +27,6 @@ use futures::sync::mpsc::UnboundedSender;
 
 use tls_api::TlsConnector;
 
-use tokio_core::net::TcpStream;
 use tokio_core::reactor;
 use tokio_timer::Timer;
 use tokio_io::AsyncWrite;
