@@ -22,6 +22,11 @@ pub struct ServerTest {
     pub port: u16,
 }
 
+#[cfg(unix)]
+/// HTTP/2 server w/unix domain socket used by tests
+pub struct ServerTestUnixSocket {
+    pub server: Server<String>,
+}
 
 struct Blocks {}
 
@@ -43,7 +48,6 @@ impl Service for Blocks {
     }
 }
 
-
 struct Echo {}
 
 impl Service for Echo {
@@ -51,7 +55,6 @@ impl Service for Echo {
         Response::headers_and_stream(Headers::ok_200(), req)
     }
 }
-
 
 impl ServerTest {
     pub fn new() -> ServerTest {
@@ -64,6 +67,21 @@ impl ServerTest {
         ServerTest {
             server: server,
             port: port,
+        }
+    }
+}
+
+#[cfg(unix)]
+impl ServerTestUnixSocket {
+    pub fn new(addr: String) -> ServerTestUnixSocket {
+        let mut server = ServerBuilder::new_plain_unix();
+        server.set_unix_addr(addr).unwrap();
+
+        server.service.set_service("/blocks", Arc::new(Blocks {}));
+        server.service.set_service("/echo", Arc::new(Echo {}));
+        let server = server.build().expect("server");
+        ServerTestUnixSocket {
+            server: server,
         }
     }
 }
