@@ -401,7 +401,7 @@ pub fn http_1_1() {
 pub fn http_1_1_unix() {
     env_logger::init().ok();
 
-    let _server = ServerTestUnixSocket::new("/tmp/rust_http2_test".to_owned());
+    let _server = ServerTest::new_unix("/tmp/rust_http2_test".to_owned());
 
     let mut unix_stream = UnixStream::connect("/tmp/rust_http2_test").expect("connect");
 

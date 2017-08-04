@@ -22,12 +22,6 @@ pub struct ServerTest {
     pub port: u16,
 }
 
-#[cfg(unix)]
-/// HTTP/2 server w/unix domain socket used by tests
-pub struct ServerTestUnixSocket {
-    pub server: Server<String>,
-}
-
 struct Blocks {}
 
 impl Service for Blocks {
@@ -69,11 +63,9 @@ impl ServerTest {
             port: port,
         }
     }
-}
 
-#[cfg(unix)]
-impl ServerTestUnixSocket {
-    pub fn new(addr: String) -> ServerTestUnixSocket {
+    #[cfg(unix)]
+    pub fn new_unix(addr: String) -> ServerTestUnixSocket {
         let mut server = ServerBuilder::new_plain_unix();
         server.set_unix_addr(addr).unwrap();
 

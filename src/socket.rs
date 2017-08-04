@@ -1,4 +1,5 @@
 use std::io;
+use std::net::SocketAddr;
 use std::any::Any;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -19,10 +20,34 @@ pub trait ToSocketListener {
     fn cleanup(&self);
 }
 
+pub enum AnySocketAddr {
+    Inet(SocketAddr),
+    #[cfg(unix)]
+    Unix(String)
+}
+
+impl ToSocketListener for AnySocketAddr {
+    fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send> {
+        match self {
+            &AnySocketAddr::Inet(ref inet_addr) => inet_addr.to_listener(conf),
+            #[cfg(unix)]
+            &AnySocketAddr::Unix(ref unix_addr) => unix_addr.to_listener(conf)
+        }
+    }
+
+    fn cleanup(&self) {
+        match self {
+            &AnySocketAddr::Inet(ref inet_addr) => inet_addr.cleanup(),
+            #[cfg(unix)]
+            &AnySocketAddr::Unix(ref unix_addr) => unix_addr.cleanup(),
+        }
+    }
+}
+
 pub trait ToTokioListener {
     fn to_tokio_listener(self: Box<Self>, handle: &reactor::Handle) -> Box<ToServerStream>;
 
-    fn local_addr(&self) -> io::Result<Box<Any>>;
+    fn local_addr(&self) -> io::Result<AnySocketAddr>;
 }
 
 pub trait ToServerStream {
