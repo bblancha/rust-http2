@@ -57,7 +57,7 @@ impl ServerTest {
         server.service.set_service("/blocks", Arc::new(Blocks {}));
         server.service.set_service("/echo", Arc::new(Echo {}));
         let server = server.build().expect("server");
-        let port = server.local_addr().port();
+        let port = server.local_addr().port().unwrap();
         ServerTest {
             server: server,
             port: port,
@@ -65,15 +65,16 @@ impl ServerTest {
     }
 
     #[cfg(unix)]
-    pub fn new_unix(addr: String) -> ServerTestUnixSocket {
+    pub fn new_unix(addr: String) -> ServerTest {
         let mut server = ServerBuilder::new_plain_unix();
         server.set_unix_addr(addr).unwrap();
 
         server.service.set_service("/blocks", Arc::new(Blocks {}));
         server.service.set_service("/echo", Arc::new(Echo {}));
         let server = server.build().expect("server");
-        ServerTestUnixSocket {
+        ServerTest {
             server: server,
+            port: 0,
         }
     }
 }

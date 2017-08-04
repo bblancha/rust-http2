@@ -26,6 +26,17 @@ pub enum AnySocketAddr {
     Unix(String)
 }
 
+impl AnySocketAddr {
+    pub fn port(&self) -> io::Result<u16> {
+         match self {
+            &AnySocketAddr::Inet(ref inet_addr) => Ok(inet_addr.port()),
+            #[cfg(unix)]
+            &AnySocketAddr::Unix(ref unix_addr) =>
+                Err(io::Error::new(io::ErrorKind::Other, "Cannot get port from unix domain socket"))
+        }
+    }
+}
+
 impl ToSocketListener for AnySocketAddr {
     fn to_listener(&self, conf: &ServerConf) -> Box<ToTokioListener + Send> {
         match self {
